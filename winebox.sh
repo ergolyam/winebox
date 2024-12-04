@@ -20,7 +20,7 @@ create_wine_prefix() {
     local arch="$3"
     local use_sandbox="$4"
 
-    if awk -v name="$name" -v path="$path" '$1 == name && $2 == path { exit 1 }' "$PREFIXES_FILE"; then
+    if grep -qE "^\s*$name\s+|\s*$path\s+" "$PREFIXES_FILE"; then
         echo "Error: Prefix with name '$name' or path '$path' already exists"
         exit 1
     fi
