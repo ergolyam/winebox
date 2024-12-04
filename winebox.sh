@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PREFIXES_FILE="prefixes.list"
+PREFIXES_FILE="$HOME/.local/share/winebox_prefixes.list"
 
 create_wine_prefix() {
     local name="$1"
