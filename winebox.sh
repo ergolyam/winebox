@@ -7,6 +7,11 @@ create_wine_prefix() {
     local path="$2"
     local arch="$3"
 
+    if awk -v name="$name" -v path="$path" '$1 == name && $2 == path { exit 1 }' "$PREFIXES_FILE"; then
+        echo "Error: Prefix with name '$name' or path '$path' already exists"
+        exit 1
+    fi
+
     if [[ -z "$name" ]]; then
         name=$(basename "$path")
     fi
