@@ -104,6 +104,8 @@ exec_wine_prefix() {
 
 run_wine_app_prefix() {
     local name="$1"
+    shift
+    local args=("$@")
 
     if [[ ! -f "$PREFIXES_FILE" ]]; then
         echo "Prefixes file not found. No prefixes have been created yet"
@@ -122,8 +124,11 @@ run_wine_app_prefix() {
         exit 1
     fi
 
-    echo "Running application '$exe_path' in Wine prefix '$name'"
-    WINEPREFIX="$prefix_path" wine "$exe_path"
+    local dir
+    dir=$(dirname "$exe_path")
+
+    echo "Running application '$exe_path' in Wine prefix '$name' with basedir $dir and arguments: ${args[*]}"
+    WINEPREFIX="$prefix_path" env --chdir="$dir" wine "$exe_path" "${args[@]}"
 }
 
 list_wine_prefixes() {
@@ -246,12 +251,18 @@ process_arguments() {
             ;;
         run)
             local name=""
+            local app_args=()
 
             while [[ $# -gt 0 ]]; do
                 case "$1" in
                     --name)
                         name="$2"
                         shift 2
+                        ;;
+                        --)
+                        shift
+                        args+=("$@")
+                        break
                         ;;
                     *)
                         echo "Unknown argument: $1"
@@ -265,7 +276,7 @@ process_arguments() {
                 exit 1
             fi
 
-            run_wine_app_prefix "$name"
+            run_wine_app_prefix "$name" "${args[@]}"
             ;;
         rm)
             local name=""
