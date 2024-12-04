@@ -2,10 +2,23 @@
 
 PREFIXES_FILE="$HOME/.local/share/winebox_prefixes.list"
 
+check_winetricks() {
+    if command -v winetricks &>/dev/null; then
+        WINETRICKS="winetricks"
+    else
+        echo "winetricks not found. Downloading via curl..."
+        TEMPFILE=$(mktemp)
+        curl -s https://raw.githubusercontent.com/Winetricks/winetricks/refs/heads/master/src/winetricks -o "$TEMPFILE"
+        chmod +x $TEMPFILE
+        WINETRICKS=$TEMPFILE
+    fi
+}
+
 create_wine_prefix() {
     local name="$1"
     local path="$2"
     local arch="$3"
+    local use_sandbox="$4"
 
     if awk -v name="$name" -v path="$path" '$1 == name && $2 == path { exit 1 }' "$PREFIXES_FILE"; then
         echo "Error: Prefix with name '$name' or path '$path' already exists"
@@ -25,13 +38,19 @@ create_wine_prefix() {
     echo "Arch: $arch"
 
     WINEARCH=$arch WINEPREFIX=$path WINEDEBUG=-all wineboot
+
+    if [[ "$use_sandbox" == "true" ]]; then
+        check_winetricks
+        echo "Applying sandbox environment via winetricks..."
+        WINEPREFIX=$path $WINETRICKS sandbox
+    fi
+
     echo "$name $path" >> "$PREFIXES_FILE"
 }
 
 run_wine_prefix() {
     local name="$1"
-    shift
-    local cmd="$1"
+    local cmd="$2"
 
     if [[ ! -f "$PREFIXES_FILE" ]]; then
         echo "Prefixes file not found. No prefixes have been created yet"
@@ -105,6 +124,7 @@ process_arguments() {
             local name=""
             local path="wine"
             local arch="win64"
+            local use_sandbox="false"
             while [[ $# -gt 0 ]]; do
                 case "$1" in
                     --name)
@@ -119,13 +139,17 @@ process_arguments() {
                         arch="$2"
                         shift 2
                         ;;
+                    --sandbox)
+                        use_sandbox="true"
+                        shift
+                        ;;
                     *)
                         echo "Unknown argument: $1"
                         exit 1
                         ;;
                 esac
             done
-            create_wine_prefix "$name" "$path" "$arch"
+            create_wine_prefix "$name" "$path" "$arch" "$use_sandbox"
             ;;
         run)
             local name=""
