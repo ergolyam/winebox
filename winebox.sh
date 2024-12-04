@@ -52,9 +52,10 @@ create_wine_prefix() {
     echo "$name $path" >> "$PREFIXES_FILE"
 }
 
-run_wine_prefix() {
+exec_wine_prefix() {
     local name="$1"
     local cmd="$2"
+    local basedir="$3"
 
     if [[ ! -f "$PREFIXES_FILE" ]]; then
         echo "Prefixes file not found. No prefixes have been created yet"
@@ -69,8 +70,15 @@ run_wine_prefix() {
         exit 1
     fi
 
-    echo "Run the command '$cmd' in Wine prefix '$name' with path $prefix_path"
-    WINEPREFIX="$prefix_path" wine "$cmd"
+    if [[ "$basedir" == "true" ]]; then
+        local dir
+        dir=$(dirname "$cmd")
+        echo "Executing '$cmd' in Wine prefix '$name' with basedir $dir"
+        WINEPREFIX="$prefix_path" env --chdir="$dir" wine "$cmd"
+    else
+        echo "Executing '$cmd' in Wine prefix '$name'"
+        WINEPREFIX="$prefix_path" wine "$cmd"
+    fi
 }
 
 list_wine_prefixes() {
@@ -155,7 +163,7 @@ process_arguments() {
             done
             create_wine_prefix "$name" "$path" "$arch" "$use_sandbox"
             ;;
-        run)
+        exec)
             local name=""
             local cmd=""
 
@@ -164,6 +172,10 @@ process_arguments() {
                     --name)
                         name="$2"
                         shift 2
+                        ;;
+                    --chdir)
+                        use_basedir="true"
+                        shift
                         ;;
                     *)
                         cmd="$1"
@@ -182,7 +194,7 @@ process_arguments() {
                 exit 1
             fi
 
-            run_wine_prefix "$name" "$cmd"
+            exec_wine_prefix "$name" "$cmd" "$use_basedir"
             ;;
         rm)
             local name=""
