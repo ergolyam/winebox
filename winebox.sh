@@ -62,8 +62,7 @@ exec_wine_prefix() {
         exit 1
     fi
 
-    local prefix_path
-    prefix_path=$(grep "^$name " "$PREFIXES_FILE" | cut -d' ' -f2)
+    read -r prefix_name prefix_path exe_path <<< $(grep "^$name " "$PREFIXES_FILE")
 
     if [[ -z "$prefix_path" ]]; then
         echo "Prefix with name '$name' not found"
@@ -79,6 +78,52 @@ exec_wine_prefix() {
         echo "Executing '$cmd' in Wine prefix '$name'"
         WINEPREFIX="$prefix_path" wine "$cmd"
     fi
+    if [[ -n "$exe_path" ]]; then
+        echo "Exe path already set for prefix '$name': $exe_path"
+    else
+        desktop_dir="$prefix_path/drive_c/users/Public/Desktop/"
+        if [[ -d "$desktop_dir" ]]; then
+            lnk_files=("$desktop_dir"/*.lnk)
+            if [[ -e "${lnk_files[0]}" ]]; then
+                for lnk in "${lnk_files[@]}"; do
+                    exe_path=$(strings "$lnk" | grep 'C:\\.*\.exe' | sed 's|C:\\|drive_c/|' | tr '\\' '/')
+                    if [[ -n "$exe_path" ]]; then
+                        sed -i "/^$name /s|$| $prefix_path/$exe_path|" "$PREFIXES_FILE"
+                        echo "Exe path '$exe_path' add to prefix '$name'"
+                        break
+                    fi
+                done
+            else
+                echo "No .lnk files found on the Desktop for prefix '$name'"
+            fi
+        else
+            echo "Desktop directory '$desktop_dir' does not exist"
+        fi
+    fi
+}
+
+run_wine_app_prefix() {
+    local name="$1"
+
+    if [[ ! -f "$PREFIXES_FILE" ]]; then
+        echo "Prefixes file not found. No prefixes have been created yet"
+        exit 1
+    fi
+
+    read -r prefix_name prefix_path exe_path <<< $(grep "^$name " "$PREFIXES_FILE")
+
+    if [[ -z "$prefix_path" ]]; then
+        echo "Prefix with name '$name' not found"
+        exit 1
+    fi
+
+    if [[ -z "$exe_path" ]]; then
+        echo "Exe path for prefix '$name' not set. Please execute a command first to detect .lnk files."
+        exit 1
+    fi
+
+    echo "Running application '$exe_path' in Wine prefix '$name'"
+    WINEPREFIX="$prefix_path" wine "$exe_path"
 }
 
 list_wine_prefixes() {
@@ -87,15 +132,18 @@ list_wine_prefixes() {
         exit 1
     fi
 
-    echo "+----------------+-------------------------------------------------+"
-    echo "| Prefix name    | Path                                            |"
-    echo "+----------------+-------------------------------------------------+"
+    printf "+----------------+-------------------------------------------------+----------------------------------------------+\n"
+    printf "| %-14s | %-47s | %-44s |\n" "Prefix name" "Path" "Exe Path"
+    printf "+----------------+-------------------------------------------------+----------------------------------------------+\n"
     
-    while IFS=' ' read -r name path; do
-        printf "| %-14s | %-47s |\n" "$name" "$path"
+    while IFS=' ' read -r name path exe_path; do
+        if [[ -z "$exe_path" ]]; then
+            exe_path="-"
+        fi
+        printf "| %-14s | %-47s | %-44s |\n" "$name" "$path" "$exe_path"
     done < "$PREFIXES_FILE"
 
-    echo "+----------------+-------------------------------------------------+"
+    printf "+----------------+-------------------------------------------------+----------------------------------------------+\n"
 }
 
 remove_wine_prefix() {
@@ -195,6 +243,29 @@ process_arguments() {
             fi
 
             exec_wine_prefix "$name" "$cmd" "$use_basedir"
+            ;;
+        run)
+            local name=""
+
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --name)
+                        name="$2"
+                        shift 2
+                        ;;
+                    *)
+                        echo "Unknown argument: $1"
+                        exit 1
+                        ;;
+                esac
+            done
+
+            if [[ -z "$name" ]]; then
+                echo "Error: You must specify the prefix name with --name"
+                exit 1
+            fi
+
+            run_wine_app_prefix "$name"
             ;;
         rm)
             local name=""
