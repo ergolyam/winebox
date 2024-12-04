@@ -43,6 +43,10 @@ create_wine_prefix() {
         check_winetricks
         echo "Applying sandbox environment via winetricks..."
         WINEPREFIX=$path $WINETRICKS sandbox
+
+        sandbox_dir="/home/$USER/Downloads/"
+        mkdir -p $sandbox_dir
+        ln -s $sandbox_dir "$path/dosdevices/z:"
     fi
 
     echo "$name $path" >> "$PREFIXES_FILE"
