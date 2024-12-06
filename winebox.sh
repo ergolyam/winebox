@@ -1,8 +1,12 @@
 #!/bin/bash
 
-PREFIXES_FILE="$HOME/.local/share/winebox_prefixes.list"
 WINEBOX_DIR="$HOME/.local/share/winebox"
+mkdir -p "$WINEBOX_DIR"
+
+PREFIXES_FILE="$WINEBOX_DIR/winebox_prefixes.list"
+
 WINE_GE_DIR="$WINEBOX_DIR/wine-ge"
+DXVK_DIR="$WINEBOX_DIR/dxvk"
 
 check_winetricks() {
     if command -v winetricks &>/dev/null; then
@@ -17,12 +21,10 @@ check_winetricks() {
 }
 
 install_wine_ge() {
-    mkdir -p "$WINEBOX_DIR"
-
     if [[ ! -x "$WINE_GE_DIR/bin/wine" ]]; then
         echo "wine-ge not installed. Starting installation..."
         
-        DOWNLOAD_URL=$(curl -s https://api.github.com/repos/GloriousEggroll/wine-ge-custom/releases/latest | \
+        local DOWNLOAD_URL=$(curl -s https://api.github.com/repos/GloriousEggroll/wine-ge-custom/releases/latest | \
             jq -r '.assets[] | select(.name | test(".*\\.tar\\.xz$")) | .browser_download_url')
 
         if [[ -z "$DOWNLOAD_URL" ]]; then
@@ -32,10 +34,10 @@ install_wine_ge() {
 
         echo "Download link: $DOWNLOAD_URL"
 
-        TEMPFILE=$(mktemp)
+        local TEMPFILE=$(mktemp)
         wget "$DOWNLOAD_URL" -O "$TEMPFILE" 2>&1
         if [[ $? -ne 0 ]]; then
-            echo "Error: loading wine-ge"
+            echo "Error: download wine-ge"
             rm -f "$TEMPFILE"
             exit 1
         fi
@@ -47,7 +49,7 @@ install_wine_ge() {
             exit 1
         fi
 
-        EXTRACTED_DIR=$(tar -tf "$TEMPFILE" | head -1 | cut -f1 -d"/")
+        local EXTRACTED_DIR=$(tar -tf "$TEMPFILE" | head -1 | cut -f1 -d"/")
         mv "$WINEBOX_DIR/$EXTRACTED_DIR" "$WINE_GE_DIR"
 
         rm -f "$TEMPFILE"
@@ -58,12 +60,52 @@ install_wine_ge() {
     fi
 }
 
+install_dxvk () {
+    if [[ ! -d "$DXVK_DIR" ]]; then
+        echo "dxvk not installed. Starting installation..."
+        local DOWNLOAD_URL=$(curl -s https://api.github.com/repos/doitsujin/dxvk/releases/latest | \
+            jq -r '.assets[] | select(.name | test(".*\\.tar\\.gz$") and (test("native") | not)) | .browser_download_url')
+
+        if [[ -z "$DOWNLOAD_URL" ]]; then
+            echo "Failed to get link to dxvk archive"
+            exit 1
+        fi
+
+        echo "Download link: $DOWNLOAD_URL"
+
+        local TEMPFILE=$(mktemp)
+        wget "$DOWNLOAD_URL" -O "$TEMPFILE" 2>&1
+        if [[ $? -ne 0 ]]; then
+            echo "Error: download dxvk"
+            rm -f "$TEMPFILE"
+            exit 1
+        fi
+
+        tar -xf "$TEMPFILE" -C "$WINEBOX_DIR"
+        if [[ $? -ne 0 ]]; then
+            echo "Error: unpacking dxvk"
+            rm -f "$TEMPFILE"
+            exit 1
+        fi
+
+        local EXTRACTED_DIR=$(tar -tf "$TEMPFILE" | head -1 | cut -f1 -d"/")
+        mv "$WINEBOX_DIR/$EXTRACTED_DIR" "$DXVK_DIR"
+
+        rm -f "$TEMPFILE"
+
+        echo "dxvk installed successfully in $DXVK_DIR"
+    else
+        echo "dxvk is already installed"
+    fi
+}
+
 create_wine_prefix() {
     local name="$1"
     local path="$2"
     local arch="$3"
     local use_sandbox="$4"
     local wine_type="$5"
+    local use_dxvk="$6"
 
     if grep -qE "^\s*$name\s+|\s*$path\s+" "$PREFIXES_FILE"; then
         echo "Error: Prefix with name '$name' or path '$path' already exists"
@@ -101,6 +143,17 @@ create_wine_prefix() {
         sandbox_dir="/home/$USER/Downloads/"
         mkdir -p $sandbox_dir
         ln -s $sandbox_dir "$path/dosdevices/z:"
+    fi
+
+    if [[ "$use_dxvk" == "true" ]]; then
+        install_dxvk
+        echo "Applying dxvk environment..."
+      if [[ $arch == "win32" ]]; then
+          cp -v $DXVK_DIR/x32/*.dll "$path/drive_c/windows/system32"
+      elif [[ $arch == "win64" ]]; then
+          cp -v $DXVK_DIR/x64/*.dll "$path/drive_c/windows/system32"
+          cp -v $DXVK_DIR/x32/*.dll "$path/drive_c/windows/syswow64"
+      fi
     fi
 
     echo "$name $path $wine_type" >> "$PREFIXES_FILE"
@@ -279,13 +332,17 @@ process_arguments() {
                         use_sandbox="true"
                         shift
                         ;;
+                    --dxvk)
+                        use_dxvk="true"
+                        shift
+                        ;;
                     *)
                         echo "Unknown argument: $1"
                         exit 1
                         ;;
                 esac
             done
-            create_wine_prefix "$name" "$path" "$arch" "$use_sandbox" "$wine_type"
+            create_wine_prefix "$name" "$path" "$arch" "$use_sandbox" "$wine_type" "$use_dxvk"
             ;;
         exec)
             local name=""
