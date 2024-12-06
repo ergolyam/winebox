@@ -8,6 +8,29 @@ PREFIXES_FILE="$WINEBOX_DIR/winebox_prefixes.list"
 WINE_GE_DIR="$WINEBOX_DIR/wine-ge"
 DXVK_DIR="$WINEBOX_DIR/dxvk"
 
+print_help() {
+    echo "Usage: $0 <command> [options]"
+    echo
+    echo "Commands:"
+    echo "  create         Create a new Wine prefix"
+    echo "  exec           Execute a command in an existing Wine prefix"
+    echo "  run            Run a Wine application in a prefix"
+    echo "  rm             Remove an existing Wine prefix"
+    echo "  list           List all existing Wine prefixes"
+    echo
+    echo "Options for each command:"
+    echo "  --name         Specify the name of the Wine prefix"
+    echo "  --path         Specify the path for the Wine prefix"
+    echo "  --arch         Set the architecture (win32 or win64)"
+    echo "  --type         Specify Wine version (wine or wine-ge)"
+    echo "  --sandbox      Use a sandbox environment"
+    echo "  --dxvk         Use DXVK for Vulkan-based DirectX to Vulkan translation"
+    echo "  --chdir        Change working directory for executing commands"
+    echo
+    echo "For more information, please refer to the script documentation."
+    exit 0
+}
+
 check_winetricks() {
     if command -v winetricks &>/dev/null; then
         WINETRICKS="winetricks"
@@ -338,6 +361,7 @@ process_arguments() {
                         ;;
                     *)
                         echo "Unknown argument: $1"
+                        echo "Use --help for usage information"
                         exit 1
                         ;;
                 esac
@@ -394,6 +418,7 @@ process_arguments() {
                         ;;
                     *)
                         echo "Unknown argument: $1"
+                        echo "Use --help for usage information"
                         exit 1
                         ;;
                 esac
@@ -417,6 +442,7 @@ process_arguments() {
                         ;;
                     *)
                         echo "Unknown argument: $1"
+                        echo "Use --help for usage information"
                         exit 1
                         ;;
                 esac
@@ -434,14 +460,19 @@ process_arguments() {
             ;;
         *)
             echo "Unknown command: $cmd"
+            echo "Use --help for usage information"
             exit 1
             ;;
     esac
 }
 
 if [[ $# -lt 1 ]]; then
-    echo "using: $0 <command> [options]"
+    echo "Error: Missing command. Use --help for usage information"
     exit 1
+fi
+
+if [[ $# -eq 0 || "$1" == "--help" ]]; then
+    print_help
 fi
 
 command="$1"
