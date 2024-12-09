@@ -25,6 +25,11 @@ This Bash script is a utility for managing Wine prefixes on Linux systems. It al
    sudo pacman -S wine winetricks curl wget tar jq binutils
    ```
 
+   on Fedora Linux:
+   ```bash
+   sudo dnf install wine winetricks curl wget tar jq binutils
+   ```
+
 2. **Download the Script**:  
    Clone the repository or download the script directly.
    ```bash
