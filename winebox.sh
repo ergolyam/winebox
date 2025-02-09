@@ -192,7 +192,7 @@ exec_wine_prefix() {
         exit 1
     fi
 
-    read -r prefix_name prefix_path wine_type exe_path <<< $(grep "^$name " "$PREFIXES_FILE")
+    read -r prefix_name prefix_path wine_type <<< $(grep "^$name " "$PREFIXES_FILE")
 
     if [[ -z "$prefix_path" ]]; then
         echo "Prefix with name '$name' not found"
@@ -214,63 +214,6 @@ exec_wine_prefix() {
         echo "Executing '$cmd' in Wine prefix '$name'"
         WINEPREFIX="$prefix_path" "$WINE_BIN" "$cmd"
     fi
-    if [[ -n "$exe_path" ]]; then
-        echo "App path already set for prefix '$name': $exe_path"
-    else
-        desktop_dir="$prefix_path/drive_c/users/Public/Desktop/"
-        if [[ -d "$desktop_dir" ]]; then
-            lnk_files=("$desktop_dir"/*.lnk)
-            if [[ -e "${lnk_files[0]}" ]]; then
-                for lnk in "${lnk_files[@]}"; do
-                    exe_path=$(strings "$lnk" | grep 'C:\\.*\.exe' | sed 's|C:\\|drive_c/|' | tr '\\' '/')
-                    if [[ -n "$exe_path" ]]; then
-                        sed -i "/^$name /s|$| $prefix_path/$exe_path|" "$PREFIXES_FILE"
-                        echo "App path '$exe_path' add to prefix '$name'"
-                        break
-                    fi
-                done
-            else
-                echo "No .lnk files found on the Desktop for prefix '$name'"
-            fi
-        else
-            echo "Desktop directory '$desktop_dir' does not exist"
-        fi
-    fi
-}
-
-run_wine_app_prefix() {
-    local name="$1"
-    shift
-    local args=("$@")
-
-    if [[ ! -f "$PREFIXES_FILE" ]]; then
-        echo "Prefixes file not found. No prefixes have been created yet"
-        exit 1
-    fi
-
-    read -r prefix_name prefix_path wine_type exe_path <<< $(grep "^$name " "$PREFIXES_FILE")
-
-    if [[ -z "$prefix_path" ]]; then
-        echo "Prefix with name '$name' not found"
-        exit 1
-    fi
-
-    if [[ -z "$exe_path" ]]; then
-        echo "App path for prefix '$name' not set. Please execute a command first to detect .lnk files."
-        exit 1
-    fi
-
-    if [[ "$wine_type" == "wine-ge" ]]; then
-        WINE_BIN="$WINE_GE_DIR/bin/wine"
-    else
-        WINE_BIN="wine"
-    fi
-
-    local dir
-    dir=$(dirname "$exe_path")
-
-    echo "Running application '$exe_path' in Wine prefix '$name' with basedir $dir and arguments: ${args[*]}"
-    WINEPREFIX="$prefix_path" env --chdir="$dir" "$WINE_BIN" "$exe_path" "${args[@]}"
 }
 
 list_wine_prefixes() {
@@ -280,14 +223,11 @@ list_wine_prefixes() {
     fi
 
     printf "+----------------+-------------------------------------------------+---------+----------------------------------------------+\n"
-    printf "| %-14s | %-47s | %-7s | %-44s |\n" "Prefix name" "Path" "Type" "App Path"
+    printf "| %-14s | %-47s | %-7s | %-44s |\n" "Prefix name" "Path" "Type"
     printf "+----------------+-------------------------------------------------+---------+----------------------------------------------+\n"
     
-    while IFS=' ' read -r name path wine_type exe_path; do
-        if [[ -z "$exe_path" ]]; then
-            exe_path="-"
-        fi
-        printf "| %-14s | %-47s | %-7s | %-44s |\n" "$name" "$path" "$wine_type" "$exe_path"
+    while IFS=' ' read -r name path wine_type; do
+        printf "| %-14s | %-47s | %-7s | %-44s |\n" "$name" "$path" "$wine_type"
     done < "$PREFIXES_FILE"
 
     printf "+----------------+-------------------------------------------------+---------+----------------------------------------------+\n"
@@ -400,36 +340,6 @@ process_arguments() {
             fi
 
             exec_wine_prefix "$name" "$cmd" "$use_basedir"
-            ;;
-        run)
-            local name=""
-            local app_args=()
-
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --name)
-                        name="$2"
-                        shift 2
-                        ;;
-                        --)
-                        shift
-                        args+=("$@")
-                        break
-                        ;;
-                    *)
-                        echo "Unknown argument: $1"
-                        echo "Use --help for usage information"
-                        exit 1
-                        ;;
-                esac
-            done
-
-            if [[ -z "$name" ]]; then
-                echo "Error: You must specify the prefix name with --name"
-                exit 1
-            fi
-
-            run_wine_app_prefix "$name" "${args[@]}"
             ;;
         rm)
             local name=""
