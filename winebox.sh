@@ -14,7 +14,6 @@ print_help() {
     echo "Commands:"
     echo "  create         Create a new Wine prefix"
     echo "  exec           Execute a command in an existing Wine prefix"
-    echo "  run            Run a Wine application in a prefix"
     echo "  rm             Remove an existing Wine prefix"
     echo "  list           List all existing Wine prefixes"
     echo
@@ -222,15 +221,9 @@ list_wine_prefixes() {
         exit 1
     fi
 
-    printf "+----------------+-------------------------------------------------+---------+----------------------------------------------+\n"
-    printf "| %-14s | %-47s | %-7s | %-44s |\n" "Prefix name" "Path" "Type"
-    printf "+----------------+-------------------------------------------------+---------+----------------------------------------------+\n"
-    
     while IFS=' ' read -r name path wine_type; do
-        printf "| %-14s | %-47s | %-7s | %-44s |\n" "$name" "$path" "$wine_type"
+        echo "$name $path $wine_type"
     done < "$PREFIXES_FILE"
-
-    printf "+----------------+-------------------------------------------------+---------+----------------------------------------------+\n"
 }
 
 remove_wine_prefix() {
