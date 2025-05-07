@@ -62,7 +62,6 @@ winebox <command> [options]
 
 - `create` : Create a new Wine prefix.
 - `exec`   : Execute a command in an existing Wine prefix.
-- `run`    : Run a previously detected application in a prefix.
 - `rm`     : Remove an existing Wine prefix.
 - `list`   : List all existing Wine prefixes.
 
@@ -93,17 +92,6 @@ winebox <command> [options]
    ```bash
    winebox exec --name mygame --chdir "C:\\Program Files\\MyGame" "MyGameLauncher.exe"
    ```
-
-3. **Run a previously detected application in a prefix:**
-   After you first `exec` a command that creates shortcuts (`.lnk` files), `winebox` stores the executable path. You can then simply run:
-   ```bash
-   winebox run --name mygame
-   ```
-   If arguments are needed:
-   ```bash
-   winebox run --name mygame -- --arg1 --arg2
-   ```
-   The `--` separates prefix parameters from application arguments.
 
 4. **List all existing Wine prefixes:**
    ```bash
