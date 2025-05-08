@@ -31,24 +31,10 @@ This Bash script is a utility for managing Wine prefixes on Linux systems. It al
    ```
 
 2. **Download the Script**:  
-   Clone the repository or download the script directly.
    ```bash
-   git clone https://github.com/yourusername/winebox.git
-   cd winebox
+   wget -O ~/.local/bin/winebox https://raw.githubusercontent.com/grisha765/winebox/main/winebox.sh && \
+   chmod +x ~/.local/bin/winebox
    ```
-
-3. **Set Permissions**:  
-   Make the script executable.
-   ```bash
-   chmod +x winebox.sh
-   ```
-
-4. **(Optional) Add to PATH**:  
-   To run `winebox` from anywhere, move the script to a directory in your `$PATH`:
-   ```bash
-   mv winebox.sh ~/.local/bin/winebox
-   ```
-   Ensure `~/.local/bin` is in your `$PATH`.
 
 ### Usage
 
