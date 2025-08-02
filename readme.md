@@ -32,7 +32,7 @@ This Bash script is a utility for managing Wine prefixes on Linux systems. It al
 
 2. **Download the Script**:  
    ```bash
-   wget -O ~/.local/bin/winebox https://raw.githubusercontent.com/grisha765/winebox/main/winebox.sh && \
+   wget -O ~/.local/bin/winebox https://raw.githubusercontent.com/ergolyam/winebox/main/winebox.sh && \
    chmod +x ~/.local/bin/winebox
    ```
 
